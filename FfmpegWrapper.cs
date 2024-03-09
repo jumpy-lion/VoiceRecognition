@@ -7,7 +7,7 @@ namespace VoiceRecognition;
 
 public class FfmpegWrapper(string source, string result)
 {
-    private FileInfo Source { get; set; } = new FileInfo(source);
+    private FileInfo Source { get; set; } = new(source);
     private string Result { get; set; } = result;
 
     public Task<bool> ConversionTask()
@@ -18,7 +18,8 @@ public class FfmpegWrapper(string source, string result)
                 .WithAudioSamplingRate(16000)
             )
             .OutputToFile(Result, addArguments: options => options
-                .WithAudioSamplingRate(16000))
+                .WithAudioSamplingRate(16000) // Whisper oczekuje częstotliwości próbkowania 16KHz
+            )
             .ProcessAsynchronously();
     }
 }

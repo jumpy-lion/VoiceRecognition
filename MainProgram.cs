@@ -1,5 +1,4 @@
-﻿using Whisper.net;
-using Whisper.net.Ggml;
+﻿using Whisper.net.Ggml;
 
 namespace VoiceRecognition;
 
@@ -11,14 +10,15 @@ internal static class MainProgram
 
         var dataDirectory = Directory.CreateDirectory($"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/VoiceRecognitionData");
         var modelPath = $"{dataDirectory.FullName}/model.bin";
+        Task? modelDownloadStream = null;
         if (!File.Exists(modelPath))
         {
-            using var client = new HttpClient();
-            var netStream = await WhisperGgmlDownloader.GetGgmlModelAsync(GgmlType.Base);
+            Console.WriteLine("Rozpoczynam pobieranie modelu w tle...");
+            var netStream = await WhisperGgmlDownloader.GetGgmlModelAsync(GgmlType.Medium);
             var fileStream = File.Open(modelPath, FileMode.Create);
-            await netStream.CopyToAsync(fileStream);
+            modelDownloadStream = netStream.CopyToAsync(fileStream);
         }
-        Console.WriteLine("Czytam wejście z mikrofonu, wciśnij enter, żeby zakończyć...");
+        Console.Write("Czytam wejście z mikrofonu, wciśnij enter, żeby zakończyć...");
         var inputFilePath = $"{dataDirectory.FullName}/input.raw";
         var reader = new MicrophoneReader(inputFilePath);
         Console.ReadLine();
@@ -30,15 +30,17 @@ internal static class MainProgram
             outputFile
         );
         await wrapper.ConversionTask();
-        Console.WriteLine("Rozpoznaję mowę...:");
-        using var whisperFactory = WhisperFactory.FromPath(modelPath);
-        await using var processor = whisperFactory.CreateBuilder()
-            .WithLanguage("pl")
-            .Build();
-        var readFile = File.OpenRead(outputFile);
-        await foreach (var result in processor.ProcessAsync(readFile))
+        if (modelDownloadStream != null)
         {
-            Console.WriteLine($"{result.Start}->{result.End}: {result.Text}");
+            Console.WriteLine("Czekam, aż model zostanie pobrany...");
+            await modelDownloadStream;
+        }
+        Console.WriteLine("Rozpoznaję mowę...:");
+        File.OpenRead(outputFile);
+        var whisperWrapper = new WhisperWrapper(modelPath, "pl");
+        await foreach (var line in whisperWrapper.ProcessFile(File.OpenRead(outputFile)))
+        {
+            Console.WriteLine(line);
         }
     }
 
