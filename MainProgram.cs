@@ -11,34 +11,33 @@ internal static class MainProgram
         var dataDirectory = Directory.CreateDirectory($"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}/VoiceRecognitionData");
         var modelPath = $"{dataDirectory.FullName}/model.bin";
         Task? modelDownloadStream = null;
+        FileStream? fileStream = null;
         if (!File.Exists(modelPath))
         {
             Console.WriteLine("Rozpoczynam pobieranie modelu w tle...");
             var netStream = await WhisperGgmlDownloader.GetGgmlModelAsync(GgmlType.Medium);
-            var fileStream = File.Open(modelPath, FileMode.Create);
+            fileStream = File.Open(modelPath, FileMode.Create);
             modelDownloadStream = netStream.CopyToAsync(fileStream);
+            modelDownloadStream.Start();
         }
         Console.Write("Czytam wejście z mikrofonu, wciśnij enter, żeby zakończyć...");
-        var inputFilePath = $"{dataDirectory.FullName}/input.raw";
-        var reader = new MicrophoneReader(inputFilePath);
+        var reader = new MicrophoneReader();
+        var memoryStream = new MemoryStream();
+        reader.Start(memoryStream);
         Console.ReadLine();
         reader.ShouldRun = false;
-        var outputFile = $"{dataDirectory.FullName}/output.wav";
-        var wrapper = new FfmpegWrapper
-        (
-            inputFilePath,
-            outputFile
-        );
-        await wrapper.ConversionTask();
         if (modelDownloadStream != null)
         {
             Console.WriteLine("Czekam, aż model zostanie pobrany...");
-            await modelDownloadStream;
+            while (!modelDownloadStream.IsCompleted)
+            {
+            }
+            fileStream!.Close();
         }
         Console.WriteLine("Rozpoznaję mowę...:");
-        File.OpenRead(outputFile);
         var whisperWrapper = new WhisperWrapper(modelPath, "pl");
-        await foreach (var line in whisperWrapper.ProcessFile(File.OpenRead(outputFile)))
+        memoryStream.Position = 0;
+        await foreach (var line in whisperWrapper.ProcessFile(memoryStream))
         {
             Console.WriteLine(line);
         }

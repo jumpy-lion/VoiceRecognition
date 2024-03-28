@@ -10,7 +10,7 @@ public class WhisperWrapper(string modelPath, string language="auto")
         .WithLanguage(language)
         .Build();
 
-    public async IAsyncEnumerable<string> ProcessFile(FileStream fileStream)
+    public async IAsyncEnumerable<string> ProcessFile(Stream fileStream)
     {
         await foreach (var detected in Processor.ProcessAsync(fileStream))
         {
