@@ -18,6 +18,7 @@ internal static class MainProgram
             var netStream = await WhisperGgmlDownloader.GetGgmlModelAsync(GgmlType.Medium);
             fileStream = File.Open(modelPath, FileMode.Create);
             modelDownloadStream = netStream.CopyToAsync(fileStream);
+            modelDownloadStream.Start();
         }
         Console.Write("Czytam wejście z mikrofonu, wciśnij enter, żeby zakończyć...");
         var reader = new MicrophoneReader();
