@@ -18,7 +18,6 @@ internal static class MainProgram
             var netStream = await WhisperGgmlDownloader.GetGgmlModelAsync(GgmlType.Medium);
             fileStream = File.Open(modelPath, FileMode.Create);
             modelDownloadStream = netStream.CopyToAsync(fileStream);
-            modelDownloadStream.Start();
         }
         Console.Write("Czytam wejście z mikrofonu, wciśnij enter, żeby zakończyć...");
         var reader = new MicrophoneReader();
@@ -37,7 +36,7 @@ internal static class MainProgram
         Console.WriteLine("Rozpoznaję mowę...:");
         var whisperWrapper = new WhisperWrapper(modelPath, "pl");
         memoryStream.Position = 0;
-        await foreach (var line in whisperWrapper.ProcessFile(memoryStream))
+        await foreach (var line in whisperWrapper.ProcessStream(memoryStream))
         {
             Console.WriteLine(line);
         }
